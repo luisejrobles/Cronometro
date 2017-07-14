@@ -21,7 +21,7 @@ void stopwatch_display( void );
 uint8_t stopwatch_lap( void );
 void stopwatch_lapConvert( uint8_t lap );
 void stopwatch_reset( void );
-uint8_t stopwatch_showLap( void );
+void stopwatch_showLap( void );
 void stopwatch_start( void );
 void stopwatch_stop( void );
 void Timer0_init( void );
@@ -50,12 +50,12 @@ int main(void)
     while (1) 
     {
     	initStructs();		//iniciando structs
-	    UART0_puts("\n\r[C] Comenzar.");		//1
+	    UART0_puts("\n\r\n\r[C] Comenzar.");		//1
 	    UART0_puts("\n\r[P] Parar.");			//2
 	    UART0_puts("\n\r[L] Lap. ");			//3
 	    UART0_puts("\n\r[R] Reset.");			//4
 	    UART0_puts("\n\r[V] Ver laps.");		//5
-	    UART0_puts("\n\r[S] Ver cronometro.");		//6
+	    UART0_puts("\n\r[S] Ver cronometro.");	//6
 	    //op = UART0_getchar();
 	    switch( getOp() )
 	    {
@@ -68,7 +68,7 @@ int main(void)
 	    		break;
 	    	case 3:			//lap
 	    		if(!stopwatch_lap() ){
-	    			UART0_puts("Error, numero maximo de laps es 8.");
+	    			UART0_puts("\n\rError, numero maximo de laps es 8.");
 	    		}
 	    		break;
 	    	case 4:			//reset
@@ -78,13 +78,13 @@ int main(void)
 	    		stopwatch_showLap();
 	    		break;
 	    	case 6:			//ver cronometro
+				stopwatch_display();
 	    		break;
 	    	default:
 	    		break;
 	    }
     }
 }
-
 void itoa(char *str, uint16_t num, uint8_t base)
 {
 	uint8_t i = 0, j = 0;
@@ -107,7 +107,7 @@ uint8_t getOp( void )
 {
 	uint8_t op;
 	op = UART0_getchar();
-	if( op=='C' || op== 'C' )
+	if( op=='C' || op== 'c' )
 	{
 		return 1;
 	}else if( op=='P' || op=='p' )
@@ -122,7 +122,7 @@ uint8_t getOp( void )
 	}else if( op=='V' || op=='v' )
 	{	
 		return 5;
-	}else if( op=='S'|| op=='S' )
+	}else if( op=='S'|| op=='s' )
 	{
 		return 6;
 	}else
@@ -141,16 +141,16 @@ void initStructs( void )
 void stopwatch_convert()
 {
 	horas = calculoHora(microSeg);
-	minutos = (horas*36000000000)-calculoMinutos(microSeg);
-	segundos = (minutos*60000000)-calculoSegundos(microSeg);
-	milisegundos = (segundos*1000000)-calculoMiliSegundos(microSeg);
+	minutos = calculoMinutos(microSeg)-(horas*36000000000);
+	segundos = calculoSegundos(microSeg)-(minutos*60000000);
+	milisegundos = calculoMiliSegundos(microSeg)-(segundos*1000000);
 }
 void stopwatch_lapConvert( uint8_t lap )
 {
 	horas = calculoHora(microSeg);
-	minutos = (horas*36000000000)-calculoMinutos(myLaps[lap].microSegundos);
-	segundos = (minutos*60000000)-calculoSegundos(microSeg);
-	milisegundos = (segundos*1000000)-calculoMiliSegundos(microSeg);
+	minutos = calculoMinutos(myLaps[lap].microSegundos)-(horas*36000000000);
+	segundos = calculoSegundos(microSeg)-(minutos*60000000);
+	milisegundos = calculoMiliSegundos(microSeg)-(segundos*1000000);
 }
 void stopwatch_display( void )
 {
@@ -177,46 +177,36 @@ uint8_t stopwatch_lap( void )
 {
 	if( lap<8 )
 	{
-		myLaps[lap].microSegundos = microSeg;  
-	}else
-	{
-		return 0;
+		myLaps[lap++].microSegundos = microSeg;
+		return 1; 
 	}
+	return 0;
 }
-void stopwatch_list( uint8_t lap )
+void stopwatch_showLap( void )
 {
 	char horasCad[4];
 	char minutosCad[4];
 	char segundosCad[4];
 	char milisegundosCad[4];
+	uint8_t lap = 0;
 	
-	UART0_puts("\n\rLap ");
-	UART0_puts(lap+'0');
-	stopwatch_lapConvert(lap);
-	itoa(horasCad,horas,10);
-	itoa(minutosCad,minutos,10);
-	itoa(segundosCad,segundos,10);
-	itoa(milisegundosCad,milisegundos,10);
-	UART0_puts("\n\rCon: \n\r");
-	UART0_puts(horasCad);
-	UART0_puts(":");
-	UART0_puts(minutosCad);
-	UART0_puts(":");
-	UART0_puts(segundosCad);
-	UART0_puts(":");
-	UART0_puts(milisegundosCad);
-}
-uint8_t stopwatch_showLap( void )
-{
-	uint8_t lap;
-	UART0_puts("\n\rSeleccione el lap a ver (1 al 8)");
-	lap = UART0_getchar();
-	lap-='0';
-	if(lap >0 && lap <9 )
+	UART0_puts("\n\rLaps guardadas son: ");
+	while(lap<8)
 	{
-		stopwatch_list(lap);
-	}else{
-		return 0;
+		stopwatch_lapConvert(lap++);
+		itoa(horasCad,horas,10);
+		itoa(minutosCad,minutos,10);
+		itoa(segundosCad,segundos,10);
+		itoa(milisegundosCad,milisegundos,10);
+		UART0_puts("\n\r");
+		UART0_puts(horasCad);
+		UART0_puts(":");
+		UART0_puts(minutosCad);
+		UART0_puts(":");
+		UART0_puts(segundosCad);
+		UART0_puts(":");
+		UART0_puts(milisegundosCad);
+		UART0_puts("\n\r");
 	}
 }
 void stopwatch_start( void )
